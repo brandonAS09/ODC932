@@ -1,0 +1,56 @@
+section .data
+    num1 db 5          ; Primer número (0-9)
+    num2 db 4          ; Segundo número (0-9)
+    result db 0        ; Variable para almacenar el resultado de la suma
+    msg db "Resultado: ", 0  ; Mensaje inicial
+    resultStr db "00", 10     ; Cadena para el resultado en ASCII y salto de línea
+    zeroMsg db "Esto es un cero", 10  ; Mensaje "Esto es un cero" con salto de línea
+
+section .text
+    global _start
+
+_start:
+    ; Realizar la suma
+    mov al, [num1]         ; Cargar num1 en AL
+    add al, [num2]         ; Sumar num2 a AL
+    mov [result], al       ; Almacenar el resultado
+
+    ; Convertir el resultado a ASCII
+    add al, '0'            ; Convertir el valor numérico a carácter ASCII
+    mov [resultStr], al    ; Almacenar el carácter ASCII en resultStr
+
+    ; Imprimir el mensaje de texto
+    mov eax, 4             ; sys_write
+    mov ebx, 1             ; descriptor de archivo 1 (stdout)
+    mov ecx, msg           ; dirección del mensaje
+    mov edx, 11            ; longitud del mensaje
+    int 0x80               ; llamada al sistema
+
+    ; Imprimir el resultado de la suma
+    mov eax, 4             ; sys_write
+    mov ebx, 1             ; descriptor de archivo 1 (stdout)
+    mov ecx, resultStr     ; dirección del resultado convertido a ASCII
+    mov edx, 2             ; longitud del resultado (2 caracteres: uno para el número y otro para el salto de línea)
+    int 0x80               ; llamada al sistema
+
+    ; Verificar si el resultado es cero
+    cmp al, 0              ; Comparar el resultado con 0
+    je print_zero_message  ; Si es cero, saltar a print_zero_message
+
+    ; Agregar salto de línea a la cadena del resultado
+    mov byte [resultStr + 1], 10  ; Agregar salto de línea
+    jmp end_program        ; Saltar al final del programa
+
+print_zero_message:
+    ; Imprimir "Esto es un cero"
+    mov eax, 4             ; sys_write
+    mov ebx, 1             ; descriptor de archivo 1 (stdout)
+    mov ecx, zeroMsg       ; dirección de la cadena "Esto es un cero"
+    mov edx, 19            ; longitud del mensaje
+    int 0x80               ; llamada al sistema
+
+end_program:
+    ; Terminar el programa
+    mov eax, 1             ; sys_exit
+    xor ebx, ebx           ; código de salida 0
+    int 0x80               ; llamada al sistema
