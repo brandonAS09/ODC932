@@ -1,0 +1,36 @@
+section .data
+
+result db 0            ; Define un byte con el valor de 0 para almacenar el valor de la suma
+msg db 'Resultado:', 0  ; Definir un mensaje a mostrar
+
+section .bss 
+buffer resb 4          ; Reservar 4 bytes en la sección BSS para almacenar el carácter del resultado 
+
+section .text
+global _start           ; Declarar el punto de entrada del programa 
+
+_start:
+    ; Usando direccionamiento inmediato para cargar los valores directamente
+    mov al, 5           ; Cargar el valor inmediato 5 
+    add al, 11          ; Sumar el valor inmediato 11
+    mov [result], al    ; Almacenar el resultado en 'result'
+
+    movzx eax, byte [result] ; Cargar el valor en result
+    add eax, 48          ; Convertir el valor numérico en su correspondiente ASCII ('0' = 48)
+    mov [buffer], al     ; Almacenar el carácter ASCII en el buffer 
+
+    mov eax, 4          ; Código de llamada al sistema 
+    mov ebx, 1          ; Descriptor de archivo 1 (stdout)
+    mov ecx, msg        ; Dirección del mensaje a mostrar  
+    mov edx, 11         ; Longitud del mensaje 
+    int 0x80            ; Llamar al kernel 
+
+    mov eax, 4          ; Código de llamada al sistema  
+    mov ebx, 1          ; Descriptor del archivo 1 (stdout)
+    mov ecx, buffer     ; Dirección del buffer que contiene el carácter ASCII 
+    mov edx, 1          ; Longitud del carácter a mostrar
+    int 0x80            ; Llamar al kernel
+
+    mov eax, 1          ; Código de llamada al sistema 
+    xor ebx, ebx        ; Código de salida 
+    int 0x80            ; Llamar al kernel 
