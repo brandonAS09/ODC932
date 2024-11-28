@@ -1,0 +1,45 @@
+section .data
+    num1 db 5            ; Definimos la variable 'num1' y le asignamos el valor 5 (un byte)
+    num2 db 11           ; Definimos la variable 'num2' y le asignamos el valor 11 (un byte)
+    result db 0          ; Definimos la variable 'result' para almacenar el resultado de la suma (inicializada a 0)
+    message db "Resultado: ", 0  ; Definimos una cadena de texto "Resultado: " que termina con el byte 0 (carácter nulo)
+
+section .bss
+    buffer resb 4        ; Reservamos 4 bytes en memoria para la variable 'buffer', que utilizaremos para almacenar temporalmente el valor del número a imprimir
+
+section .text
+    global _start        ; Indicamos que la etiqueta '_start' es global para que el linker la pueda identificar como el punto de entrada del programa
+
+%macro PRINT_STRING 1
+    ; Imprime una cadena de texto en la consola
+    mov eax, 4           ; La llamada al sistema 4 (sys_write) es para escribir datos en un archivo (en este caso la salida estándar)
+    mov ebx, 1           ; El descriptor de archivo 1 corresponde a la salida estándar (stdout)
+    mov ecx, %1          ; ECX contiene la dirección de la cadena a imprimir (la cadena está en %1)
+    mov edx, 13          ; EDX contiene el tamaño de la cadena a imprimir (en este caso 13 bytes)
+    int 0x80             ; Llamada al sistema (interrupt 0x80) para ejecutar la operación
+%endmacro
+
+%macro PRINT_NUMBER 1
+    ; Imprime un número (en este caso, un valor de un byte convertido a su carácter ASCII correspondiente)
+    mov eax, %1          ; Cargamos el valor del número en EAX
+    add eax, '0'         ; Convertimos el valor en EAX a su carácter ASCII sumando '0' (carácter 48 en ASCII)
+    mov [buffer], eax    ; Almacenamos el carácter ASCII en 'buffer'
+    mov eax, 4           ; Llamada al sistema 4 (sys_write) para escribir en stdout
+    mov ebx, 1           ; El descriptor de archivo 1 corresponde a la salida estándar (stdout)
+    mov ecx, buffer      ; ECX contiene la dirección de 'buffer', donde está el carácter
+    mov edx, 1           ; EDX contiene el tamaño de la cadena (en este caso es solo un carácter)
+    int 0x80             ; Llamada al sistema para ejecutar la operación
+%endmacro
+
+_start:
+    mov al, [num1]       ; Cargamos el valor de 'num1' (5) en el registro AL
+    add al, [num2]       ; Sumamos el valor de 'num2' (11) al valor de 'num1' que está en AL, el resultado es 16
+    mov [result], al     ; Almacenamos el resultado de la suma (16) en la variable 'result'
+
+    PRINT_STRING message ; Llamamos a la macro PRINT_STRING para imprimir la cadena "Resultado: "
+    PRINT_NUMBER [result] ; Llamamos a la macro PRINT_NUMBER para imprimir el valor de 'result' (16)
+
+    ; Salir del programa
+    mov eax, 1           ; La llamada al sistema 1 (sys_exit) es para salir del programa
+    mov ebx, 0           ; Código de salida 0 (indica que el programa terminó correctamente)
+    int 0x80             ; Llamada al sistema para ejecutar la operación de salida
