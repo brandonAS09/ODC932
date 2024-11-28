@@ -1,0 +1,126 @@
+section .data
+    num1 dd 20             ; Primer número (modificar aquí). Este valor será utilizado en las operaciones matemáticas.
+    num2 dd 5              ; Segundo número (modificar aquí). Este valor será utilizado en las operaciones matemáticas.
+    operation db 3         ; Operación: 1 = suma, 2 = resta, 3 = multiplicación, 4 = división. El código de la operación se almacena aquí.
+    result_msg db "El resultado es: ", 0 ; Mensaje que se imprimirá antes de mostrar el resultado (terminado en 0 para ser una cadena válida).
+    result_msg_len equ $ - result_msg ; Calcula la longitud del mensaje de resultado.
+    div_zero_msg db "Error: División entre cero.", 10, 0 ; Mensaje de error en caso de división por cero, con un salto de línea (10 es el código ASCII para LF).
+    div_zero_msg_len equ $ - div_zero_msg ; Calcula la longitud del mensaje de error de división por cero.
+
+section .bss
+    result resb 10         ; Reserva 10 bytes en memoria para almacenar el resultado como cadena de caracteres.
+
+section .text
+    global _start
+
+_start:
+    ; Leer operación: se mueve el valor almacenado en la variable `operation` al registro eax.
+    movzx eax, byte [operation]  ; Mueve el valor de `operation` a `eax` con extensión de cero (0-255).
+    
+    ; Realizar operación: Se compara el valor de `eax` con las diferentes operaciones posibles.
+    cmp eax, 1                 ; Compara `eax` con 1 (suma).
+    je suma                    ; Si es igual, salta a la etiqueta suma.
+    cmp eax, 2                 ; Compara `eax` con 2 (resta).
+    je resta                   ; Si es igual, salta a la etiqueta resta.
+    cmp eax, 3                 ; Compara `eax` con 3 (multiplicación).
+    je multiplicacion          ; Si es igual, salta a la etiqueta multiplicación.
+    cmp eax, 4                 ; Compara `eax` con 4 (división).
+    je division                ; Si es igual, salta a la etiqueta división.
+    jmp end_program            ; Si no es ninguna de las anteriores, salta al final del programa.
+
+suma:
+    ; Realizar la suma.
+    mov eax, dword [num1]      ; Carga el primer número en `eax`.
+    add eax, dword [num2]      ; Suma el segundo número al valor de `eax`.
+    mov dword [result], eax    ; Almacena el resultado de la suma en `result`.
+    jmp mostrar_resultado      ; Salta a la etiqueta `mostrar_resultado`.
+
+resta:
+    ; Realizar la resta.
+    mov eax, dword [num1]      ; Carga el primer número en `eax`.
+    sub eax, dword [num2]      ; Resta el segundo número de `eax`.
+    mov dword [result], eax    ; Almacena el resultado de la resta en `result`.
+    jmp mostrar_resultado      ; Salta a la etiqueta `mostrar_resultado`.
+
+multiplicacion:
+    ; Realizar la multiplicación.
+    mov eax, dword [num1]      ; Carga el primer número en `eax`.
+    mov ebx, dword [num2]      ; Carga el segundo número en `ebx`.
+    imul eax, ebx              ; Multiplica `eax` por `ebx` y almacena el resultado en `eax`.
+    mov dword [result], eax    ; Almacena el resultado de la multiplicación en `result`.
+    jmp mostrar_resultado      ; Salta a la etiqueta `mostrar_resultado`.
+
+division:
+    ; Realizar la división.
+    mov eax, dword [num1]      ; Carga el dividendo (primer número) en `eax`.
+    mov ebx, dword [num2]      ; Carga el divisor (segundo número) en `ebx`.
+    cmp ebx, 0                 ; Compara si el divisor es 0.
+    je division_por_cero       ; Si es 0, salta a la etiqueta `division_por_cero` (división por cero).
+    xor edx, edx               ; Limpia el registro `edx` (lo pone a 0, necesario para la división).
+    div ebx                    ; Divide `eax` entre `ebx` (el resultado de la división se coloca en `eax`).
+    mov dword [result], eax    ; Almacena el resultado de la división en `result`.
+    jmp mostrar_resultado      ; Salta a la etiqueta `mostrar_resultado`.
+
+division_por_cero:
+    ; En caso de error por división entre cero.
+    mov edx, div_zero_msg_len  ; Carga la longitud del mensaje de error.
+    mov ecx, div_zero_msg      ; Carga la dirección del mensaje de error.
+    call print_string          ; Llama a la función para imprimir el mensaje de error.
+    jmp end_program            ; Salta al final del programa.
+
+mostrar_resultado:
+    ; Imprimir el mensaje "El resultado es: ".
+    mov edx, result_msg_len    ; Carga la longitud del mensaje.
+    mov ecx, result_msg        ; Carga la dirección del mensaje.
+    call print_string          ; Llama a la función para imprimir el mensaje.
+
+    ; Convertir el resultado a cadena.
+    mov eax, dword [result]    ; Carga el resultado en `eax`.
+    call int_to_ascii          ; Llama a la función para convertir el número a una cadena de caracteres.
+    mov ecx, result            ; Carga la dirección del resultado convertido a cadena.
+    call print_string          ; Llama a la función para imprimir la cadena del resultado.
+    jmp end_program            ; Salta al final del programa.
+
+end_program:
+    ; Terminar el programa.
+    mov eax, 1                 ; Número de la llamada al sistema para salir.
+    int 0x80                   ; Llama al sistema para finalizar el programa.
+
+print_string:
+    ; Función para imprimir una cadena.
+    mov eax, 4                 ; Número de la llamada al sistema para escribir.
+    mov ebx, 1                 ; El archivo estándar es la salida (stdout).
+    int 0x80                   ; Llama al sistema para imprimir la cadena.
+    ret                        ; Retorna de la función.
+
+; Convierte un entero en EAX a una cadena.
+int_to_ascii:
+    ; Caso especial para cuando el número es 0.
+    cmp eax, 0
+    je zero_case               ; Si el número es 0, salta a `zero_case`.
+
+    ; Prepara el espacio en memoria para la conversión.
+    lea edi, [result + 9]      ; Apunta al final de la cadena (espacio suficiente para 10 dígitos + terminador nulo).
+    mov byte [edi], 0          ; Coloca un terminador nulo al final de la cadena.
+    dec edi                    ; Mueve el puntero al espacio anterior.
+
+convert_loop:
+    xor edx, edx               ; Limpia `edx` para la división.
+    mov ebx, 10                ; Mueve 10 al registro `ebx` para la división.
+    div ebx                    ; Divide `eax` entre 10.
+    add dl, '0'                ; Convierte el residuo a su valor ASCII (entre '0' y '9').
+    mov byte [edi], dl         ; Coloca el caracter convertido en la cadena.
+    dec edi                    ; Mueve al siguiente espacio de la cadena.
+    test eax, eax              ; Verifica si `eax` es 0 (último dígito).
+    jnz convert_loop           ; Si no es 0, continúa con el siguiente dígito.
+
+    inc edi                    ; Mueve al primer carácter de la cadena (es donde debe comenzar el número).
+    jmp finish_conversion      ; Salta al final de la conversión.
+
+zero_case:
+    ; Si el número es 0, coloca un '0' en la cadena.
+    mov byte [result], '0'     ; Coloca el carácter '0' como cadena.
+    jmp finish_conversion      ; Salta al final de la conversión.
+
+finish_conversion:
+    ret                        ; Retorna de la función de conversión.
